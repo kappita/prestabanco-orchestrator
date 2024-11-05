@@ -1,0 +1,72 @@
+
+services:
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+
+    networks:
+      - app-network
+    volumes:
+      - ./dbCreate.sql:/docker-entrypoint-initdb.d/dbCreate.sql
+
+
+  backend:
+    image: kappappita/prestabanco-backend
+
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      PORT: ${PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/prestabanco
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+    expose:
+      - "9090"
+
+    deploy:
+      replicas: 2
+
+    networks:
+      - app-network
+
+    depends_on:
+      - db
+
+  
+  # Frontend
+  frontend:
+    image: kappappita/prestabanco-frontend:latest
+
+    environment:
+        VITE_API_URL: ${VITE_API_URL}
+
+    networks:
+      - app-network
+
+
+
+  # nginx
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "9090:9090"  
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - app-network
+
+networks:
+  app-network:
